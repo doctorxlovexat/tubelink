@@ -2,54 +2,163 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>YouTube Audio Streamer</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YouTube Streamer</title>
+    <style>
+        body {
+            background-color: #121212;
+            color: white;
+            font-family: Arial, sans-serif;
+        }
+        .container {
+            max-width: 800px;
+            margin: auto;
+            padding: 20px;
+            background-color: #1e1e1e;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(255, 255, 255, 0.2);
+        }
+        h1 {
+            text-align: center;
+            color: #ffffff;
+            text-shadow: 0 0 10px #ffffff;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        table, th, td {
+            border: 1px solid white;
+        }
+        th, td {
+            padding: 10px;
+            text-align: center;
+        }
+        th {
+            background-color: #333;
+        }
+        td {
+            background-color: #222;
+        }
+        input[type="text"] {
+            width: 80%;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            border: 2px solid #444;
+            background-color: #1e1e1e;
+            color: white;
+        }
+        button {
+            padding: 10px 20px;
+            background-color: #444;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #666;
+        }
+        .link-table {
+            background-color: #333;
+        }
+        .draggable {
+            cursor: move;
+        }
+    </style>
 </head>
 <body>
-    <h1>YouTube Audio Streamer</h1>
+    <div class="container">
+        <h1>YouTube Audio Streamer</h1>
+        
+        <!-- URL input and buttons -->
+        <input type="text" id="youtubeUrl" placeholder="Enter YouTube URL">
+        <button id="addLinkBtn">Add Link</button>
+        <button id="startStreamBtn">Start Stream</button>
+        <button id="stopStreamBtn">Stop Stream</button>
 
-    <form id="audio-form">
-        <input type="text" id="audioUrl" placeholder="Enter YouTube video URL" required />
-        <button type="submit">Add Audio Link</button>
-    </form>
-
-    <h2>Audio List</h2>
-    <table id="audio-list">
-        <tr>
-            <th>Audio URL</th>
-        </tr>
-    </table>
-
-    <h2>Now Streaming</h2>
-    <audio id="audio-player" controls autoplay>
-        Your browser does not support the audio tag.
-    </audio>
+        <h3>Link List</h3>
+        <table id="linkListTable" class="link-table">
+            <thead>
+                <tr>
+                    <th>Link</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody id="linkList"></tbody>
+        </table>
+    </div>
 
     <script>
-        const form = document.getElementById('audio-form');
-        const audioList = document.getElementById('audio-list');
-        const audioPlayer = document.getElementById('audio-player');
+        const addLinkBtn = document.getElementById('addLinkBtn');
+        const startStreamBtn = document.getElementById('startStreamBtn');
+        const stopStreamBtn = document.getElementById('stopStreamBtn');
+        const youtubeUrl = document.getElementById('youtubeUrl');
+        const linkListTable = document.getElementById('linkList');
+        let linkList = [];
 
-        form.addEventListener('submit', async (e) => {
+        addLinkBtn.addEventListener('click', () => {
+            const url = youtubeUrl.value;
+            if (url) {
+                linkList.push(url);
+                updateLinkList();
+                youtubeUrl.value = ''; // Clear input
+            }
+        });
+
+        startStreamBtn.addEventListener('click', () => {
+            // Add the code to start streaming the selected URL
+            alert("Stream Started");
+        });
+
+        stopStreamBtn.addEventListener('click', () => {
+            // Add the code to stop streaming
+            alert("Stream Stopped");
+        });
+
+        function updateLinkList() {
+            linkListTable.innerHTML = ''; // Clear existing rows
+            linkList.forEach((link, index) => {
+                const row = document.createElement('tr');
+                row.classList.add('draggable');
+                row.setAttribute('draggable', 'true');
+                row.addEventListener('dragstart', (e) => {
+                    e.dataTransfer.setData('text/plain', index);
+                });
+
+                const cell1 = document.createElement('td');
+                cell1.textContent = link;
+                const cell2 = document.createElement('td');
+                const deleteBtn = document.createElement('button');
+                deleteBtn.textContent = 'Delete';
+                deleteBtn.addEventListener('click', () => {
+                    linkList.splice(index, 1);
+                    updateLinkList();
+                });
+                cell2.appendChild(deleteBtn);
+                row.appendChild(cell1);
+                row.appendChild(cell2);
+
+                linkListTable.appendChild(row);
+            });
+        }
+
+        // Handle drop to reorder links
+        linkListTable.addEventListener('dragover', (e) => {
             e.preventDefault();
-            const audioUrl = document.getElementById('audioUrl').value;
+        });
 
-            // Proveri da li je URL validan
-            if (audioUrl.includes("youtube.com")) {
-                // Dodaj URL u tabelu
-                const newRow = document.createElement('tr');
-                const cell = document.createElement('td');
-                cell.textContent = audioUrl;
-                newRow.appendChild(cell);
-                audioList.appendChild(newRow);
-
-                // Onda možeš slati URL na backend
-                await fetch(`/add-audio?audioUrl=${encodeURIComponent(audioUrl)}`);
-
-                // Onda automatski strimuj audio
-                const audioId = audioUrl.split('v=')[1].split('&')[0]; // Uzmite ID iz URL-a
-                audioPlayer.src = `/stream-audio?audioUrl=${audioUrl}`;
-            } else {
-                alert('Please enter a valid YouTube URL');
+        linkListTable.addEventListener('drop', (e) => {
+            e.preventDefault();
+            const fromIndex = e.dataTransfer.getData('text/plain');
+            const toIndex = [...linkListTable.children].indexOf(e.target.closest('tr'));
+            if (fromIndex !== toIndex) {
+                const movedLink = linkList.splice(fromIndex, 1)[0];
+                linkList.splice(toIndex, 0, movedLink);
+                updateLinkList();
             }
         });
     </script>

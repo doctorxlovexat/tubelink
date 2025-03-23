@@ -1,51 +1,35 @@
+from flask import Flask, request, jsonify, render_template
 import yt_dlp
-import os
-from flask import Flask, render_template, request, redirect, url_for
-from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
 
-# Lista linkova
-links = []
-
-# Funkcija za preuzimanje YouTube audio linka
-def download_audio(url):
+# Funkcija za preuzimanje audio linka sa YouTube-a
+def download_audio(youtube_url):
     ydl_opts = {
         'format': 'bestaudio/best',
-        'outtmpl': 'downloads/%(title)s.%(ext)s',
-        'extractaudio': True,
-        'audioquality': 1,
         'postprocessors': [{
-            'key': 'FFmpegAudio',
+            'key': 'FFmpegAudioConvertor',
             'preferredcodec': 'mp3',
             'preferredquality': '192',
         }],
+        'outtmpl': 'downloads/%(id)s.%(ext)s',
     }
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-        ydl.download([url])
+        info_dict = ydl.extract_info(youtube_url, download=True)
+        return info_dict['id']
 
-# Route za početnu stranicu
 @app.route('/')
-def index():
-    return render_template('index.html', links=links)
+def home():
+    return render_template('index.html')  # HTML stranica za unos linkova
 
-# Route za dodavanje novog linka
-@app.route('/add_link', methods=['POST'])
-def add_link():
-    if request.method == 'POST':
-        url = request.form['url']
-        if url not in links:
-            links.append(url)
-            download_audio(url)  # Preuzmi audio odmah
-        return redirect(url_for('index'))
+@app.route('/start_stream', methods=['POST'])
+def start_stream():
+    youtube_url = request.form['url']
+    try:
+        video_id = download_audio(youtube_url)
+        return jsonify({'status': 'success', 'video_id': video_id})
+    except Exception as e:
+        return jsonify({'status': 'error', 'message': str(e)})
 
-# Route za brisanje linka
-@app.route('/delete_link/<url>')
-def delete_link(url):
-    if url in links:
-        links.remove(url)
-    return redirect(url_for('index'))
-
-# Pokretanje servera
 if __name__ == '__main__':
     app.run(debug=True)
